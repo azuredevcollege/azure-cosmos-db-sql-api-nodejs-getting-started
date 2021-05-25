@@ -1,7 +1,7 @@
 var config = {}
 
-config.endpoint = '<FILL IN YOUR COSMOS ENDPOINT>'
-config.key =  '<FILL IN YOUR COSMOS DB PRIMARY KEY>'
+config.endpoint = ''
+config.key =  ''
 
 config.database = {
   id: 'FamilyDatabase'

@@ -1,6 +1,8 @@
 //@ts-check
 const CosmosClient = require('@azure/cosmos').CosmosClient
-
+const CreateBulk = require('@azure/cosmos').BulkOperationType.Create
+const faker = require('faker');
+const pLimit = require('p-limit');
 const config = require('./config')
 const url = require('url')
 
@@ -145,15 +147,77 @@ createDatabase()
   .then(() => readDatabase())
   .then(() => createContainer())
   .then(() => readContainer())
-  .then(() => createFamilyItem(config.items.Andersen))
-  .then(() => createFamilyItem(config.items.Wakefield))
+  .then(() => {
+    var personList = []
+    var bulkoperations = []
+    const limit = pLimit(1);
+    for(var i=0; i<10000; i++) {
+      personList[i] = generateData()
+    }
+    for(var i=0; i<(personList.length/100);i++) {
+      var personSlice = personList.slice(i*100,(i*100+100))
+      var operations =  personSlice.map(body => {
+      
+        return {
+              operationType: CreateBulk,
+              resourceBody: body
+        }
+      })
+      bulkoperations[i] = operations
+      console.log(operations.length)
+    }
+    var operationsbulk = bulkoperations.map(data => {
+     return limit(() => client.database(databaseId).container(containerId).items.bulk(data))
+    })
+    return Promise.all(operationsbulk)
+  })
   .then(() => queryContainer())
-  .then(() => replaceFamilyItem(config.items.Andersen))
-  .then(() => queryContainer())
-  .then(() => deleteFamilyItem(config.items.Andersen))
   .then(() => {
     exit(`Completed successfully`)
   })
   .catch(error => {
+    console.log(error)
     exit(`Completed with error ${JSON.stringify(error)}`)
   })
+
+
+function generateData() {
+  
+
+  var randomPerson = {
+    id: faker.datatype.uuid(),
+    Country: faker.address.county(),
+    //key: faker.address.countryCode(),
+    lastName: faker.name.lastName(),
+    parents: [
+      {
+        firstName: faker.name.firstName(0)
+      },
+      {
+        firstName: faker.name.firstName(1)
+      }
+    ],
+    children: [
+      {
+        firstName: faker.name.firstName(),
+        gender: faker.name.gender(),
+        jobTitle: faker.name.jobTitle(),
+        pets: [
+          {
+            givenName: faker.name.firstName()
+          }
+        ]
+      }
+    ],
+    address: {
+      state: faker.address.state(),
+      county: faker.address.county(),
+      city: faker.address.city()
+    }
+  }
+
+  //console.log(JSON.stringify(randomPerson, null, 2))
+
+  return randomPerson;
+
+}
