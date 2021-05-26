@@ -1,28 +1,28 @@
 //@ts-check
-const CosmosClient = require('@azure/cosmos').CosmosClient
-const CreateBulk = require('@azure/cosmos').BulkOperationType.Create
-const faker = require('faker');
-const pLimit = require('p-limit');
-const config = require('./config')
-const url = require('url')
+const CosmosClient = require("@azure/cosmos").CosmosClient;
+const CreateBulk = require("@azure/cosmos").BulkOperationType.Create;
+const faker = require("faker");
+const pLimit = require("p-limit");
+const config = require("./config");
+const url = require("url");
 
-const endpoint = config.endpoint
-const key = config.key
+const endpoint = config.endpoint;
+const key = config.key;
 
-const databaseId = config.database.id
-const containerId = config.container.id
-const partitionKey = { kind: 'Hash', paths: ['/Country'] }
+const databaseId = config.database.id;
+const containerId = config.container.id;
+const partitionKey = { kind: "Hash", paths: ["/Country"] };
 
-const client = new CosmosClient({ endpoint, key })
+const client = new CosmosClient({ endpoint, key });
 
 /**
  * Create the database if it does not exist
  */
 async function createDatabase() {
   const { database } = await client.databases.createIfNotExists({
-    id: databaseId
-  })
-  console.log(`Created database:\n${database.id}\n`)
+    id: databaseId,
+  });
+  console.log(`Created database:\n${database.id}\n`);
 }
 
 /**
@@ -31,8 +31,8 @@ async function createDatabase() {
 async function readDatabase() {
   const { resource: databaseDefinition } = await client
     .database(databaseId)
-    .read()
-  console.log(`Reading database:\n${databaseDefinition.id}\n`)
+    .read();
+  console.log(`Reading database:\n${databaseDefinition.id}\n`);
 }
 
 /**
@@ -44,8 +44,8 @@ async function createContainer() {
     .containers.createIfNotExists(
       { id: containerId, partitionKey },
       { offerThroughput: 400 }
-    )
-  console.log(`Created container:\n${config.container.id}\n`)
+    );
+  console.log(`Created container:\n${config.container.id}\n`);
 }
 
 /**
@@ -55,8 +55,8 @@ async function readContainer() {
   const { resource: containerDefinition } = await client
     .database(databaseId)
     .container(containerId)
-    .read()
-  console.log(`Reading container:\n${containerDefinition.id}\n`)
+    .read();
+  console.log(`Reading container:\n${containerDefinition.id}\n`);
 }
 
 /**
@@ -66,35 +66,35 @@ async function createFamilyItem(itemBody) {
   const { item } = await client
     .database(databaseId)
     .container(containerId)
-    .items.upsert(itemBody)
-  console.log(`Created family item with id:\n${itemBody.id}\n`)
+    .items.upsert(itemBody);
+  console.log(`Created family item with id:\n${itemBody.id}\n`);
 }
 
 /**
  * Query the container using SQL
  */
 async function queryContainer() {
-  console.log(`Querying container:\n${config.container.id}`)
+  console.log(`Querying container:\n${config.container.id}`);
 
   // query to return all children in a family
   const querySpec = {
-    query: 'SELECT VALUE r.children FROM root r WHERE r.lastName = @lastName',
+    query: "SELECT VALUE r.children FROM root r WHERE r.lastName = @lastName",
     parameters: [
       {
-        name: '@lastName',
-        value: 'Andersen'
-      }
-    ]
-  }
+        name: "@lastName",
+        value: "Andersen",
+      },
+    ],
+  };
 
   const { resources: results } = await client
     .database(databaseId)
     .container(containerId)
     .items.query(querySpec)
-    .fetchAll()
+    .fetchAll();
   for (var queryResult of results) {
-    let resultString = JSON.stringify(queryResult)
-    console.log(`\tQuery returned ${resultString}\n`)
+    let resultString = JSON.stringify(queryResult);
+    console.log(`\tQuery returned ${resultString}\n`);
   }
 }
 
@@ -102,14 +102,14 @@ async function queryContainer() {
  * Replace the item by ID.
  */
 async function replaceFamilyItem(itemBody) {
-  console.log(`Replacing item:\n${itemBody.id}\n`)
+  console.log(`Replacing item:\n${itemBody.id}\n`);
   // Change property 'grade'
-  itemBody.children[0].grade = 6
+  itemBody.children[0].grade = 6;
   const { item } = await client
     .database(databaseId)
     .container(containerId)
     .item(itemBody.id, itemBody.Country)
-    .replace(itemBody)
+    .replace(itemBody);
 }
 
 /**
@@ -120,15 +120,15 @@ async function deleteFamilyItem(itemBody) {
     .database(databaseId)
     .container(containerId)
     .item(itemBody.id, itemBody.Country)
-    .delete(itemBody)
-  console.log(`Deleted item:\n${itemBody.id}\n`)
+    .delete(itemBody);
+  console.log(`Deleted item:\n${itemBody.id}\n`);
 }
 
 /**
  * Cleanup the database and collection on completion
  */
 async function cleanup() {
-  await client.database(databaseId).delete()
+  await client.database(databaseId).delete();
 }
 
 /**
@@ -136,11 +136,11 @@ async function cleanup() {
  * @param {string} message - The message to display
  */
 function exit(message) {
-  console.log(message)
-  console.log('Press any key to exit')
-  process.stdin.setRawMode(true)
-  process.stdin.resume()
-  process.stdin.on('data', process.exit.bind(process, 0))
+  console.log(message);
+  console.log("Press any key to exit");
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.on("data", process.exit.bind(process, 0));
 }
 
 createDatabase()
@@ -148,42 +148,50 @@ createDatabase()
   .then(() => createContainer())
   .then(() => readContainer())
   .then(() => {
-    var personList = []
-    var bulkoperations = []
+    var personList = [];
+    var bulkoperations = [];
     const limit = pLimit(1);
-    for(var i=0; i<10000; i++) {
-      personList[i] = generateData()
+    for (var i = 0; i < 100; i++) {
+      personList[i] = generateData();
     }
-    for(var i=0; i<(personList.length/100);i++) {
-      var personSlice = personList.slice(i*100,(i*100+100))
-      var operations =  personSlice.map(body => {
-      
+    for (var i = 0; i < personList.length / 100; i++) {
+      var personSlice = personList.slice(i * 100, i * 100 + 100);
+      var operations = personSlice.map((body) => {
         return {
-              operationType: CreateBulk,
-              resourceBody: body
-        }
-      })
-      bulkoperations[i] = operations
-      console.log(operations.length)
+          operationType: CreateBulk,
+          resourceBody: body,
+        };
+      });
+      bulkoperations[i] = operations;
     }
-    var operationsbulk = bulkoperations.map(data => {
-     return limit(() => client.database(databaseId).container(containerId).items.bulk(data))
-    })
-    return Promise.all(operationsbulk)
+    var operationspromises = bulkoperations.map((data) => {
+      return limit(() =>
+        client
+          .database(databaseId)
+          .container(containerId)
+          .items.bulk(data)
+          .then((result) => {
+            var filteredlist = result.filter((elem) => {
+              return elem.statusCode != 201;
+            });
+            if(filteredlist.length > 0) {
+              throw filteredlist
+            }
+          })
+      );
+    });
+    return Promise.all(operationspromises);
   })
   .then(() => queryContainer())
   .then(() => {
-    exit(`Completed successfully`)
+    exit(`Completed successfully`);
   })
-  .catch(error => {
-    console.log(error)
-    exit(`Completed with error ${JSON.stringify(error)}`)
-  })
-
+  .catch((error) => {
+    console.log(error);
+    exit(`Completed with error ${JSON.stringify(error)}`);
+  });
 
 function generateData() {
-  
-
   var randomPerson = {
     id: faker.datatype.uuid(),
     Country: faker.address.county(),
@@ -191,11 +199,11 @@ function generateData() {
     lastName: faker.name.lastName(),
     parents: [
       {
-        firstName: faker.name.firstName(0)
+        firstName: faker.name.firstName(0),
       },
       {
-        firstName: faker.name.firstName(1)
-      }
+        firstName: faker.name.firstName(1),
+      },
     ],
     children: [
       {
@@ -204,20 +212,19 @@ function generateData() {
         jobTitle: faker.name.jobTitle(),
         pets: [
           {
-            givenName: faker.name.firstName()
-          }
-        ]
-      }
+            givenName: faker.name.firstName(),
+          },
+        ],
+      },
     ],
     address: {
       state: faker.address.state(),
       county: faker.address.county(),
-      city: faker.address.city()
-    }
-  }
+      city: faker.address.city(),
+    },
+  };
 
   //console.log(JSON.stringify(randomPerson, null, 2))
 
   return randomPerson;
-
 }
