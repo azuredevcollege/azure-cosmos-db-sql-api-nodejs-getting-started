@@ -43,7 +43,7 @@ async function createContainer() {
     .database(databaseId)
     .containers.createIfNotExists(
       { id: containerId, partitionKey },
-      { offerThroughput: 400 }
+      { offerThroughput: 10000 }
     );
   console.log(`Created container:\n${config.container.id}\n`);
 }
@@ -149,9 +149,10 @@ createDatabase()
   .then(() => readContainer())
   .then(() => {
     var personList = [];
+    console.time("cosmos");
     var bulkoperations = [];
     const limit = pLimit(1);
-    for (var i = 0; i < 100; i++) {
+    for (var i = 0; i < 200000; i++) {
       personList[i] = generateData();
     }
     for (var i = 0; i < personList.length / 100; i++) {
@@ -171,6 +172,7 @@ createDatabase()
           .container(containerId)
           .items.bulk(data)
           .then((result) => {
+            console.timeLog("cosmos")
             var filteredlist = result.filter((elem) => {
               return elem.statusCode != 201;
             });
@@ -180,10 +182,12 @@ createDatabase()
           })
       );
     });
+    console.timeLog("cosmos");
     return Promise.all(operationspromises);
   })
   .then(() => queryContainer())
   .then(() => {
+    console.timeEnd("cosmos")
     exit(`Completed successfully`);
   })
   .catch((error) => {
