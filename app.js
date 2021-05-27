@@ -42,8 +42,7 @@ async function createContainer() {
   const { container } = await client
     .database(databaseId)
     .containers.createIfNotExists(
-      { id: containerId, partitionKey },
-      { offerThroughput: 10000 }
+      { id: containerId, partitionKey, maxThroughput: 10000 }
     );
   console.log(`Created container:\n${config.container.id}\n`);
 }
@@ -147,44 +146,7 @@ createDatabase()
   .then(() => readDatabase())
   .then(() => createContainer())
   .then(() => readContainer())
-  .then(() => {
-    var personList = [];
-    console.time("cosmos");
-    var bulkoperations = [];
-    const limit = pLimit(1);
-    for (var i = 0; i < 200000; i++) {
-      personList[i] = generateData();
-    }
-    for (var i = 0; i < personList.length / 100; i++) {
-      var personSlice = personList.slice(i * 100, i * 100 + 100);
-      var operations = personSlice.map((body) => {
-        return {
-          operationType: CreateBulk,
-          resourceBody: body,
-        };
-      });
-      bulkoperations[i] = operations;
-    }
-    var operationspromises = bulkoperations.map((data) => {
-      return limit(() =>
-        client
-          .database(databaseId)
-          .container(containerId)
-          .items.bulk(data)
-          .then((result) => {
-            console.timeLog("cosmos")
-            var filteredlist = result.filter((elem) => {
-              return elem.statusCode != 201;
-            });
-            if(filteredlist.length > 0) {
-              throw filteredlist
-            }
-          })
-      );
-    });
-    console.timeLog("cosmos");
-    return Promise.all(operationspromises);
-  })
+  .then(() => generateDataAndBulkUpload())
   .then(() => queryContainer())
   .then(() => {
     console.timeEnd("cosmos")
@@ -231,4 +193,60 @@ function generateData() {
   //console.log(JSON.stringify(randomPerson, null, 2))
 
   return randomPerson;
+}
+
+function generateDataAndBulkUpload() {
+  var personList = [];
+  const bulkSize = 100
+  const documentCount = 1000000
+  console.time("cosmos");
+  var bulkOperations = [];
+
+  for (var i = 0; i < documentCount; i++) {
+    personList[i] = generateData();
+  }
+  for (var i = 0; i < personList.length / bulkSize; i++) {
+    var personSlice = personList.slice(i * bulkSize, i * bulkSize + bulkSize);
+    var operations = personSlice.map(bulkBody);
+    bulkOperations[i] = operations;
+  }
+
+  console.timeLog("cosmos");
+  return Promise.all(limitedBulkUpload(bulkOperations));
+}
+
+
+function limitedBulkUpload(bulkoperations) {
+
+const limit = pLimit(1);
+  // Missing Error Handling
+  // Missing Retry Pattern
+return bulkoperations.map((data) => limit(() => bulkUpload(data)));
+
+}
+
+function bulkBody(data) {
+
+    return {
+      operationType: CreateBulk,
+      resourceBody: data,
+    };
+
+}
+
+function bulkUpload(data) {
+
+  return client
+      .database(databaseId)
+      .container(containerId)
+      .items.bulk(data)
+      .then((result) => {
+        console.timeLog("cosmos")
+        var filteredlist = result.filter((elem) => {
+          return elem.statusCode != 201;
+        });
+        if(filteredlist.length > 0) {
+          throw filteredlist
+        }
+      })
 }
