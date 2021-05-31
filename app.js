@@ -59,17 +59,6 @@ async function readContainer() {
 }
 
 /**
- * Create family item if it does not exist
- */
-async function createFamilyItem(itemBody) {
-  const { item } = await client
-    .database(databaseId)
-    .container(containerId)
-    .items.upsert(itemBody);
-  console.log(`Created family item with id:\n${itemBody.id}\n`);
-}
-
-/**
  * Query the container using SQL
  */
 async function queryContainer() {
@@ -77,13 +66,7 @@ async function queryContainer() {
 
   // query to return all children in a family
   const querySpec = {
-    query: "SELECT VALUE r.children FROM root r WHERE r.lastName = @lastName",
-    parameters: [
-      {
-        name: "@lastName",
-        value: "Andersen",
-      },
-    ],
+    query: "SELECT TOP 100 r.children FROM root r"
   };
 
   const { resources: results } = await client
@@ -95,39 +78,6 @@ async function queryContainer() {
     let resultString = JSON.stringify(queryResult);
     console.log(`\tQuery returned ${resultString}\n`);
   }
-}
-
-/**
- * Replace the item by ID.
- */
-async function replaceFamilyItem(itemBody) {
-  console.log(`Replacing item:\n${itemBody.id}\n`);
-  // Change property 'grade'
-  itemBody.children[0].grade = 6;
-  const { item } = await client
-    .database(databaseId)
-    .container(containerId)
-    .item(itemBody.id, itemBody.Country)
-    .replace(itemBody);
-}
-
-/**
- * Delete the item by ID.
- */
-async function deleteFamilyItem(itemBody) {
-  await client
-    .database(databaseId)
-    .container(containerId)
-    .item(itemBody.id, itemBody.Country)
-    .delete(itemBody);
-  console.log(`Deleted item:\n${itemBody.id}\n`);
-}
-
-/**
- * Cleanup the database and collection on completion
- */
-async function cleanup() {
-  await client.database(databaseId).delete();
 }
 
 /**
@@ -198,7 +148,7 @@ function generateData() {
 function generateDataAndBulkUpload() {
   var personList = [];
   const bulkSize = 100
-  const documentCount = 1000000
+  const documentCount = 100
   console.time("cosmos");
   var bulkOperations = [];
 
