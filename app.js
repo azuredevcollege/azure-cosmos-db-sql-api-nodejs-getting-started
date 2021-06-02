@@ -15,6 +15,9 @@ const partitionKey = { kind: "Hash", paths: ["/Country"] };
 
 const client = new CosmosClient({ endpoint, key });
 
+const bulkSize = 100 // 100 is a maximum for bulk with same partition key.
+const documentCount = 100000
+
 /**
  * Create the database if it does not exist
  */
@@ -147,8 +150,6 @@ function generateData() {
 
 function generateDataAndBulkUpload() {
   var personList = [];
-  const bulkSize = 100
-  const documentCount = 100000
   console.time("cosmos");
   var bulkOperations = [];
 
