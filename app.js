@@ -148,7 +148,7 @@ function generateData() {
 function generateDataAndBulkUpload() {
   var personList = [];
   const bulkSize = 100
-  const documentCount = 100
+  const documentCount = 100000
   console.time("cosmos");
   var bulkOperations = [];
 
